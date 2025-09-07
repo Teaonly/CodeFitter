@@ -1,0 +1,9 @@
+[project]
+name = "CodeFitter"
+version = "0.1.0"
+description = "Code Fitter, 代码钳工，命令行编码智能体，半自动+精细编码"
+readme = "README.md"
+requires-python = "~=3.12"
+dependencies = [
+    "rich>=14.1.0",
+]
