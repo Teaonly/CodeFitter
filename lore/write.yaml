@@ -106,5 +106,5 @@ InputFiles: +|
   content: {__CONTENT__}
 
 GithubSearch: +|
-  According this task, github search "{__KEYWORDS__}".
+  According this task, github search: '{__KEYWORDS__}'.
   Results: {__CONTENT__}
