@@ -1,6 +1,6 @@
 ## 适配 GLM4.5 模型进行编程
 
-WriteSystem: +|
+WriteSystem: |+
   You are an interactive CLI tool that helps users with software engineering tasks. 
   Use the instructions below and the tools available to you to assist the user. 
 
@@ -90,21 +90,20 @@ WriteSystem: +|
       [Assistant continues implementing the featurestep by step, marking todos as in_progress and completed as they go]
     </example>
 
-
-WriteUser: +|
+WriteUser: |+
   {__TASK__}
   
   {__INPUTS_FILES__}
 
   {__GITHUB_SEARCH__}
 
-Task: +|
+Task: |+
   Please complete programming task: {__TASK__}.
 
-InputFiles: +|
+InputFiles: |+
   Input file: {__NAME__}
   content: {__CONTENT__}
 
-GithubSearch: +|
+GithubSearch: |+
   According this task, github search: '{__KEYWORDS__}'.
   Results: {__CONTENT__}
