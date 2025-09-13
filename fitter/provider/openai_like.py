@@ -2,9 +2,7 @@ import json
 from httpx import Client
 from loguru import logger
 
-from modules.llm.base import LLMProviderBase
-
-EXCEPTION_WORD = "抱歉，我未能理解。"
+from provider.llm.base import LLMProviderBase
 
 class LLMProvider(LLMProviderBase):
     def __init__(self, config):
@@ -21,7 +19,6 @@ class LLMProvider(LLMProviderBase):
             "stream": True,
             "enable_thinking": False,
             "temperature": 0.2,
-            "frequency_penalty": 0.9,
             "response_format": {"type": "text"},
         };
         headers = {

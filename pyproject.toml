@@ -5,6 +5,7 @@ description = "Code Fitter, 代码钳工，命令行编码智能体，半自动+
 readme = "README.md"
 requires-python = "~=3.12"
 dependencies = [
+    "httpx>=0.28.1",
     "loguru>=0.7.3",
     "prompt-toolkit>=3.0.52",
     "pyyaml>=6.0.2",
