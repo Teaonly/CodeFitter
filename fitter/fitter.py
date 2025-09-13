@@ -175,8 +175,21 @@ class CodeFitter(ABC):
             arguments = json.loads(arguments)
             color_print(f">>目标文件：{arguments["file_name"]}", True)
             
-            ## TODO 彩色打印 git diff/patch 格式的内容 arguments["diff_content"]
+            ## 彩色打印 git diff/patch 格式的内容
+            diff_content = arguments["diff_content"]
+            lines = diff_content.split('\n')
             
+            for line in lines:
+                if line.startswith('+++') or line.startswith('---'):
+                    print_formatted_text(HTML(f'<ansicyan>{line}</ansicyan>'))
+                elif line.startswith('@@'):
+                    print_formatted_text(HTML(f'<ansiyellow>{line}</ansiyellow>'))
+                elif line.startswith('+'):
+                    print_formatted_text(HTML(f'<ansigreen>{line}</ansigreen>'))
+                elif line.startswith('-'):
+                    print_formatted_text(HTML(f'<ansired>{line}</ansired>'))
+                else:
+                    print(line)
 
             color_print('------------------------\n')
             
