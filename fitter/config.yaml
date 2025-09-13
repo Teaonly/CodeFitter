@@ -2,8 +2,8 @@
 Model:
   selected: GLM
   GLM:
-    import: "fitter.provider.openai_like"
-    model: "glm-4.5"
+    import: "fitter.provider.bigmodel"
+    model_name: "glm-4.5"
     base_url: "https://open.bigmodel.cn/api/paas/v4"
     api_key: BIGMODEL_API_KEY
 
