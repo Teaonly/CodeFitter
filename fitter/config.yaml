@@ -34,6 +34,7 @@ SystemPrompt: |+
   - 当任务是回答问题的时候，请通过Makrdown格式输出给用户，输出的内容会在控制台Console Terminal上显示。
   - 当任务是修改文件，调用 ModifyFile 工具输出，git diff / patch 格式的内容，这样用户可以直接完成文件的修改。
   - 当任务是创建文件，调用 WriteFile 工具输出完整的文件内容即可，满足用户需求。
+  - 在完成代码修改的时候，注意要把没有用的注释，也修改掉。
 
   Code style:
   - IMPORTANT: DO NOT ADD ***ANY*** COMMENTS unless asked

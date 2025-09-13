@@ -3,6 +3,7 @@ import sys
 import json
 import uuid
 import tempfile
+import html
 from io import StringIO
 from abc import ABC
 from loguru import logger
@@ -91,14 +92,17 @@ def dump_diff_content(diff_content):
     print_formatted_text(HTML(f'<violet>==</violet>'))
     lines = diff_content.split('\n')
     for line in lines:
+        ## 将 line 字符串中的 HTML 特殊字符转义，避免错误打印
+        escaped_line = html.escape(line)
+        
         if line.startswith('+++') or line.startswith('---'):
-            print_formatted_text(HTML(f'<ansicyan>{line}</ansicyan>'))
+            print_formatted_text(HTML(f'<ansicyan>{escaped_line}</ansicyan>'))
         elif line.startswith('@@'):
-            print_formatted_text(HTML(f'<ansiyellow>{line}</ansiyellow>'))
+            print_formatted_text(HTML(f'<ansiyellow>{escaped_line}</ansiyellow>'))
         elif line.startswith('+'):
-            print_formatted_text(HTML(f'<ansigreen>{line}</ansigreen>'))
+            print_formatted_text(HTML(f'<ansigreen>{escaped_line}</ansigreen>'))
         elif line.startswith('-'):
-            print_formatted_text(HTML(f'<ansired>{line}</ansired>'))
+            print_formatted_text(HTML(f'<ansired>{escaped_line}</ansired>'))
         else:
             print(line)
     
@@ -290,7 +294,7 @@ class CodeFitter(ABC):
             'role': "assistant",
             'content': talking,
             'reasoning_content': thinking,
-            'tool_calls': [fcall]
+            'tool_calls': [fcall] if fcall is not None else None
         }
         
         ## 显示LLM响应消息
@@ -306,10 +310,14 @@ class CodeFitter(ABC):
             color_print('------------------------\n')
         
         ## 如果没有工具调用
-        
+        if fcall is None:
+            confirm = confirm_from_input(f"模型没有发起工具调用，是否退出(y/n)")
+            if confirm:
+                sys.exit(0)
+            return
 
         ## 处理相关的命令
-        if fcall is not None and fcall["function"]["name"] == "ModifyFile":
+        if fcall["function"]["name"] == "ModifyFile":
             try:
                 fname = fcall["function"]["name"]
                 callid = fcall["id"]
