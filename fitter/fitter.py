@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import uuid
 from abc import ABC
@@ -84,6 +85,24 @@ def color_print(text, changeColor=False):
     color = COLOR[_color_]
     print_formatted_text(HTML(f'<{color}>{text}</{color}>'))
 
+def dump_diff_content(diff_content):
+    ## 彩色打印 git diff/patch 格式的内容
+    print_formatted_text(HTML(f'<violet>==</violet>'))
+    lines = diff_content.split('\n')
+    for line in lines:
+        if line.startswith('+++') or line.startswith('---'):
+            print_formatted_text(HTML(f'<ansicyan>{line}</ansicyan>'))
+        elif line.startswith('@@'):
+            print_formatted_text(HTML(f'<ansiyellow>{line}</ansiyellow>'))
+        elif line.startswith('+'):
+            print_formatted_text(HTML(f'<ansigreen>{line}</ansigreen>'))
+        elif line.startswith('-'):
+            print_formatted_text(HTML(f'<ansired>{line}</ansired>'))
+        else:
+            print(line)
+    
+    print_formatted_text(HTML(f'<violet>==================</violet>\n'))
+
 def content_from_input(info):
     print_formatted_text(HTML(f'<violet>{info}</violet>'))
     while True:
@@ -94,6 +113,20 @@ def content_from_input(info):
             continue
 
     return content
+
+def confirm_from_input(info):
+    color_print(info)
+    while True:
+        try:
+            confirm = prompt(">").strip().lower()
+            if confirm in ['y', 'yes']:
+                return True
+            elif confirm in ['n', 'no']:
+                return False
+            else:
+                color_print('请输入 y/yes 或 n/no')
+        except EOFError:
+            continue
 
 class CodeFitter(ABC):
     def __init__(self, config):
@@ -153,7 +186,17 @@ class CodeFitter(ABC):
         
 
     def chat_loop(self, allMessages):
+        print("\n\n 调用模型...")
         thinking, talking, fcall = self.llm.response(allMessages, allTools)
+
+        new_message = {
+            'role': "assistant",
+            'content': talking,
+            'reasoning_content': thinking,
+            'tool_calls': [fcall]
+        }
+        
+
 
         ## 显示LLM响应消息
         if thinking is not None and thinking.strip() != "":
@@ -169,30 +212,36 @@ class CodeFitter(ABC):
             
         ## 处理相关的命令
         if fcall["function"]["name"] == "ModifyFile":
-            fname = fcall["function"]["name"]
-            color_print(f'>>>>>>工具：{fname}', True)
-            arguments = fcall["function"]["arguments"]
-            arguments = json.loads(arguments)
-            color_print(f">>目标文件：{arguments["file_name"]}", True)
+            try:
+                fname = fcall["function"]["name"]
+                callid = fcall["id"]
+                color_print(f'>>>>>>工具：{fname}', True)
+                
+                arguments = fcall["function"]["arguments"]            
+                arguments = json.loads(arguments)
+                diff_content = arguments["diff_content"]
+                dump_diff_content(diff_content)
             
-            ## 彩色打印 git diff/patch 格式的内容
-            diff_content = arguments["diff_content"]
-            lines = diff_content.split('\n')
+            except Exception as e:
+                color_print(f'解析工具失败{e}, 重新调用')
+                return self.chat_loop(allMessages)
             
-            for line in lines:
-                if line.startswith('+++') or line.startswith('---'):
-                    print_formatted_text(HTML(f'<ansicyan>{line}</ansicyan>'))
-                elif line.startswith('@@'):
-                    print_formatted_text(HTML(f'<ansiyellow>{line}</ansiyellow>'))
-                elif line.startswith('+'):
-                    print_formatted_text(HTML(f'<ansigreen>{line}</ansigreen>'))
-                elif line.startswith('-'):
-                    print_formatted_text(HTML(f'<ansired>{line}</ansired>'))
-                else:
-                    print(line)
+            confirm = confirm_from_input(f"是否确认覆盖修改 {arguments["file_name"]}？(y/n)")
+            if confirm == True:
+                color_print(f'已经完成文件: {arguments["file_name"]}的修改，退出程序！')
+                ## TODO 根据获得 path/diff 字符串，修改目标文件
+                
+                sys.exit(0)
 
-            color_print('------------------------\n')
-            
-
-        uinput = content_from_input("用户输入")
+            ## 反馈，继续下一轮次调用
+            response = content_from_input("输入反馈意见：")
+            response = f"用户拒绝了修改，反馈如下：{response}"
+            call_result = {
+                'role' : 'tool',
+                'tool_call_id': callid,
+                'content': response
+            }
+            allMessages.append(new_message)
+            allMessages.append(call_result)
+            return self.chat_loop(allMessages)
 
