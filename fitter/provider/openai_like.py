@@ -1,14 +1,18 @@
 import json
+import os
 from httpx import Client
 from loguru import logger
 
-from provider.llm.base import LLMProviderBase
+from provider.base import LLMProviderBase
 
 class LLMProvider(LLMProviderBase):
     def __init__(self, config):
         self.model_name = config.get("model_name")
-        self.api_key = config.get("api_key")
         self.base_url = config.get("base_url")
+        api_key_env = config.get("api_key")
+        self.api_key = os.getenv(api_key_env)
+        if self.api_key == None:
+            raise Exception("从环境变量中，无法获取 API_KEY")
         self.client = Client()
 
     def _build_request(self, dialogue, functions = None):
@@ -22,7 +26,7 @@ class LLMProvider(LLMProviderBase):
             "response_format": {"type": "text"},
         };
         headers = {
-            "Authorization": "Bearer " + self.api_key,
+            "Authorization": "Bearer " + self.api_key, # type: ignore
             "Content-Type": "application/json"
         };
 
@@ -30,26 +34,6 @@ class LLMProvider(LLMProviderBase):
             payload["tools"] = functions;
 
         return url, payload, headers
-
-    def response(self, dialogue):
-        firstFlag = True
-        try:
-            url, payload, headers = self._build_request(dialogue);
-            with self.client.stream('POST', url , headers = headers, json = payload, timeout=5.0 ) as response:
-                for line in response.iter_lines():
-                    lj = line[6:];
-                    if lj.startswith("{"):
-                        lj = json.loads(lj)
-                        token = lj["choices"][0]["delta"]["content"]
-                        if token != None:
-                            firstFlag = False
-                            yield token
-
-        except Exception as e:
-            logger.error(f"Error in response generation: {str(e)}")
-        
-        if firstFlag :
-            yield EXCEPTION_WORD
 
     def response_with_functions(self, dialogue, functions=None):
         firstFlag = True
@@ -79,6 +63,6 @@ class LLMProvider(LLMProviderBase):
             logger.error(f"Error in response generation: {e}")
         
         if firstFlag :
-            yield EXCEPTION_WORD, None
+            yield None, None
             
 

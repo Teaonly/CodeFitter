@@ -2,7 +2,10 @@
 Model:
   selected: GLM
   GLM:
-    import: "provider"
+    import: "provider.openai_like.LLMProvider"
+    model: "glm-4.5"
+    base_url: ”https://open.bigmodel.cn/api/paas/v4“
+    api_key: BIGMODEL_API_KEY
 
 SystemPrompt: |+
   You are an interactive CLI tool that helps users with software engineering tasks. 
@@ -35,3 +38,7 @@ SystemPrompt: |+
   - IMPORTANT: DO NOT ADD ***ANY*** COMMENTS unless asked
 
 ReadfileTool:
+  name: ReadFile
+  description: |+
+    Read the contents of a given relative file path. Use this when you want to see what's inside a file. Do not use this with directory names.
+  

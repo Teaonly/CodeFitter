@@ -1,12 +1,17 @@
 import yaml
 import os
 import argparse
+from dotenv import load_dotenv
 from loguru import logger
 
-
-
-
 def main():
+    ## 初始化logger - 仅通知用户，不做记录
+    logger.remove()
+    logger.add(lambda msg: print(msg, end=''), format='<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | {message}')
+    
+    ## 加载环境变量
+    load_dotenv()
+    
     ## 加载配置文件
     code_path = os.path.dirname( os.path.abspath(__file__) )
     lore_path = os.path.join(code_path, "lore/write.yaml")
