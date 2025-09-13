@@ -3,7 +3,7 @@ import os
 from httpx import Client
 from loguru import logger
 
-from provider.base import LLMProviderBase
+from fitter.provider.base import LLMProviderBase
 
 class LLMProvider(LLMProviderBase):
     def __init__(self, config):
@@ -36,7 +36,13 @@ class LLMProvider(LLMProviderBase):
         return url, payload, headers
 
     def response_with_functions(self, dialogue, functions=None):
-        firstFlag = True
+        tool_call = {
+            "type": "function", 
+            "function": {
+                "name": None,
+                "arguments":  ""
+            }
+        }
         try:
             url, payload, headers = self._build_request(dialogue, functions);
             with self.client.stream('POST', url , headers = headers, json = payload, timeout=5.0 ) as response:
@@ -53,16 +59,26 @@ class LLMProvider(LLMProviderBase):
 
                         fcall = None
                         if "tool_calls" in lj["choices"][0]["delta"]:
-                            fcall = lj["choices"][0]["delta"]["tool_calls"]
-                        
-                        if (token != None) or (fcall != None):
-                            firstFlag = False
-                            yield token, fcall
+                            fcall = lj["choices"][0]["delta"]["tool_calls"]                         
+                            fcall = fcall[0]
+                            if "id" in fcall and fcall["id"] is not None:
+                                tool_call["id"] = fcall["id"]
+                            if "function" in fcall and fcall["function"] is not None:
+                                fcall = fcall["function"]
+                                if "name" in fcall and fcall["name"] is not None:
+                                    tool_call["function"]["name"] = fcall["name"]
+                                if "arguments" in fcall and fcall["arguments"] is not None:
+                                    tool_call["function"]["arguments"] = tool_call["function"]["arguments"] + fcall["arguments"]
 
+                        if token is not None:
+                            yield token, None
+            
+            if tool_call["function"]["name"] is not None:
+                yield token, tool_call
+            
+            return
         except Exception as e:
             logger.error(f"Error in response generation: {e}")
         
-        if firstFlag :
-            yield None, None
-            
+        yield None, None            
 

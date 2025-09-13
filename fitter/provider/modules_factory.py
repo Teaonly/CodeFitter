@@ -3,7 +3,7 @@ import os
 import sys
 from loguru import logger
 
-from provider.base import LLMProviderBase
+from fitter.provider.base import LLMProviderBase
 
 """工厂方法创建实例"""
 def create_provider(config) -> LLMProviderBase:
