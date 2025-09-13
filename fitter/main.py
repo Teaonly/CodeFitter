@@ -42,14 +42,17 @@ def chat(config):
     
     llm = create_provider(config)
 
-    response = llm.response_with_functions(messages)
+    '''    
+    response = llm.response_stream(messages)
     for think, token, fcall in response:
         if think is not None and think !="":
             print(f">{think}")
         
         if token is not None and token != "":
             print(f"{token}")
-
+    '''
+    
+    thinking, content, fcall = llm.response(messages)
 
     
 

@@ -38,13 +38,30 @@ class LLMProvider(LLMProviderBase):
     def response(self, dialogue, functions=None):
         try:
             url, payload, headers = self._build_request(dialogue, functions, False)
+            response = self.client.post(url, headers=headers, json=payload, timeout=30)
             
+            if response.status_code != 200:
+                logger.error(f"{response.json()}")
+                raise Exception( f"LLM调用异常：{response.json()}")
             
-            return
+            result = response.json()
+            thinking = None
+            if "reasoning_content" in result["choices"][0]["message"]:
+                thinking = result["choices"][0]["message"]["reasoning_content"] 
+
+            content = None
+            if "content" in result["choices"][0]["message"]:
+                content = result["choices"][0]["message"]["content"]
+
+            fcall = None
+            if "tool_calls" in result["choices"][0]:
+                fcall = result["choices"][0]["tool_calls"][0]
+            
+            return thinking, content, fcall
+            
         except Exception as e:
             logger.error(f"Error in response generation: {e}")
-        
-        yield None, None, None
+            raise Exception(f"LLM调用异常：{str(e)}")
 
     def response_stream(self, dialogue, functions=None):
         tool_call = {
@@ -61,7 +78,7 @@ class LLMProvider(LLMProviderBase):
                 if response.status_code != 200:
                     response.read()
                     logger.error(f"{response.json()}")
-                    raise Exception( f"{response.json()}" )
+                    raise Exception( f"LLM调用异常：{response.json()}")
                 
                 ## 解析 streaming 响应
                 for line in response.iter_lines():
@@ -94,10 +111,7 @@ class LLMProvider(LLMProviderBase):
             
             if tool_call["function"]["name"] is not None:
                 yield None, None, tool_call
-            
-            return
         except Exception as e:
             logger.error(f"Error in response generation: {e}")
-        
-        yield None, None, None
-
+            raise Exception(f"LLM调用异常：{str(e)}")
+            
