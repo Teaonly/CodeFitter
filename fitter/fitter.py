@@ -132,45 +132,8 @@ def confirm_from_input(info):
             continue
 
 def apply_patch(file_path, diff_content):
-    """使用patch-ng库应用patch/diff格式的内容到目标文件"""
-    try:
-        # 确保文件存在
-        if not os.path.exists(file_path):
-            return False, f"目标文件不存在: {file_path}"
-        
-        # 创建临时目录用于补丁应用
-        with tempfile.TemporaryDirectory() as temp_dir:
-            # 复制原文件到临时目录
-            import shutil
-            temp_file_path = os.path.join(temp_dir, os.path.basename(file_path))
-            shutil.copy2(file_path, temp_file_path)
-            
-            # 切换到临时目录
-            original_cwd = os.getcwd()
-            os.chdir(temp_dir)
-            
-            try:
-                # 使用patch-ng解析并应用补丁
-                patch_set = fromstring(diff_content.encode('utf-8'))
-                if not patch_set:
-                    return False, "无法解析patch内容"
-                
-                # 应用补丁
-                result = patch_set.apply(strip=0)
-                if not result:
-                    return False, "应用patch失败"
-                
-                # 将修改后的文件复制回原位置
-                shutil.copy2(temp_file_path, file_path)
-                return True, None
-
-            finally:
-                # 恢复原始工作目录
-                os.chdir(original_cwd)
-                
-    except Exception as e:
-        return False, f"应用patch失败: {e}"
-
+    ## TODO 完成文件修改的动作，返回 True ,None; 或者返回 False, error_message
+    
 
 
 class CodeFitter(ABC):
