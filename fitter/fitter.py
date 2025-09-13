@@ -6,7 +6,6 @@ import tempfile
 import html
 from io import StringIO
 from abc import ABC
-from loguru import logger
 from fitter.provider.modules_factory import create_provider
 from prompt_toolkit import prompt, print_formatted_text, HTML
 
@@ -314,7 +313,15 @@ class CodeFitter(ABC):
             confirm = confirm_from_input(f"模型没有发起工具调用，是否退出(y/n)")
             if confirm:
                 sys.exit(0)
-            return
+                return
+            else:
+                response = content_from_input("继续输入：")
+                allMessages.append(new_message)
+                allMessages.append({
+                    'role': 'user',
+                    'content': response
+                })
+                return self.chat_loop(allMessages)
 
         ## 处理相关的命令
         if fcall["function"]["name"] == "ModifyFile":

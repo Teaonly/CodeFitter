@@ -1,7 +1,6 @@
 import json
 import os
 from httpx import Client
-from loguru import logger
 
 from fitter.provider.base import LLMProviderBase
 
@@ -41,7 +40,6 @@ class LLMProvider(LLMProviderBase):
             response = self.client.post(url, headers=headers, json=payload, timeout=30)
             
             if response.status_code != 200:
-                logger.error(f"{response.json()}")
                 raise Exception( f"LLM调用异常：{response.json()}")
             
             result = response.json()
@@ -60,7 +58,6 @@ class LLMProvider(LLMProviderBase):
             return thinking, content, fcall
             
         except Exception as e:
-            logger.error(f"Error in response generation: {e}")
             raise Exception(f"LLM调用异常：{str(e)}")
 
     def response_stream(self, dialogue, functions=None):
@@ -77,7 +74,6 @@ class LLMProvider(LLMProviderBase):
                 ## 检查 API 是否 200 OK
                 if response.status_code != 200:
                     response.read()
-                    logger.error(f"{response.json()}")
                     raise Exception( f"LLM调用异常：{response.json()}")
                 
                 ## 解析 streaming 响应
@@ -111,6 +107,5 @@ class LLMProvider(LLMProviderBase):
             if tool_call["function"]["name"] is not None:
                 yield None, None, tool_call
         except Exception as e:
-            logger.error(f"Error in response generation: {e}")
             raise Exception(f"LLM调用异常：{str(e)}")
             

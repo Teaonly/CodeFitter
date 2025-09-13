@@ -2,7 +2,6 @@ import yaml
 import os
 import argparse
 from dotenv import load_dotenv
-from loguru import logger
 
 from fitter.fitter import CodeFitter, content_from_input
 
@@ -15,11 +14,7 @@ def get_args_from_command():
     args = parser.parse_args()
     return args
 
-def main():
-    ## 初始化logger - 仅通知用户，不做记录
-    logger.remove()
-    logger.add(lambda msg: print(msg, end=''), format='<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | {message}')
-    
+def main():    
     ## 加载环境变量
     load_dotenv()
     

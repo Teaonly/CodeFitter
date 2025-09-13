@@ -1,7 +1,6 @@
 import importlib
 import os
 import sys
-from loguru import logger
 
 from fitter.provider.base import LLMProviderBase
 
