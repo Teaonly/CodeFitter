@@ -3,58 +3,17 @@ import os
 import argparse
 from dotenv import load_dotenv
 from loguru import logger
-from prompt_toolkit import prompt, print_formatted_text, HTML
 
-from fitter.provider.modules_factory import create_provider
-
-
-def get_task_from_input():
-    print_formatted_text(HTML('<violet>输入你任务描述，如完成某文件的中TODO, Escape followed by Enter 结束！</violet>'))
-    while True:
-        try:
-            task = prompt(">", vi_mode=True,   multiline=True)
-            break
-        except EOFError:
-            continue
-
-    return task
+from fitter.fitter import CodeFitter, content_from_input
 
 def get_args_from_command():
     ## 解析命令行参数
     parser = argparse.ArgumentParser(description='CodeFitter - 命令行编码智能体')
-    parser.add_argument('-i', '--input', nargs='*', default=[], help='输入文件')
+    parser.add_argument('-i', '--inputs', nargs='*', default=[], help='输入文件')
     parser.add_argument('-o', '--output', required=False, default=None, help='输出文件')
 
     args = parser.parse_args()
     return args
-
-def chat(config):
-    messages = [
-        {
-            'role': "system",
-            'content': '你是一个小助手！'    
-        },
-        {
-            'role': "user",
-            'content': '介绍一下 Python 编程语言！'
-        }
-    ]
-    
-    llm = create_provider(config)
-
-    '''    
-    response = llm.response_stream(messages)
-    for think, token, fcall in response:
-        if think is not None and think !="":
-            print(f">{think}")
-        
-        if token is not None and token != "":
-            print(f"{token}")
-    '''
-    
-    thinking, content, fcall = llm.response(messages)
-
-    
 
 def main():
     ## 初始化logger - 仅通知用户，不做记录
@@ -70,14 +29,15 @@ def main():
     with open(lore_path, "r") as file:
         config = yaml.safe_load(file)
 
+    agent = CodeFitter(config)
+
     args = get_args_from_command()
     
-    #task = get_task_from_input()
-    
-    chat(config)
-    
-    
-    
+    #task = content_from_input("输入你任务描述")
+    task = "完成 test/simple.py 中的 TODO 的部分"
+
+    agent.fitter(task, args.inputs, args.output)
+
 
 if __name__ == "__main__":
     main()

@@ -54,9 +54,9 @@ class LLMProvider(LLMProviderBase):
                 content = result["choices"][0]["message"]["content"]
 
             fcall = None
-            if "tool_calls" in result["choices"][0]:
-                fcall = result["choices"][0]["tool_calls"][0]
-            
+            if "tool_calls" in result["choices"][0]["message"]:
+                fcall = result["choices"][0]["message"]["tool_calls"][0]
+
             return thinking, content, fcall
             
         except Exception as e:
@@ -93,7 +93,6 @@ class LLMProvider(LLMProviderBase):
                         if "content" in lj["choices"][0]["delta"]:
                             token = lj["choices"][0]["delta"]["content"]
 
-                        fcall = None
                         if "tool_calls" in lj["choices"][0]["delta"]:
                             fcall = lj["choices"][0]["delta"]["tool_calls"]                         
                             fcall = fcall[0]
