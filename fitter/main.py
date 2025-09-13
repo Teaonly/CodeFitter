@@ -32,9 +32,7 @@ def main():
     agent = CodeFitter(config)
 
     args = get_args_from_command()
-    
-    #task = content_from_input("输入你任务描述")
-    task = "完成 test/simple.py 中的 TODO 的部分"
+    task = content_from_input("输入你任务描述")
 
     agent.fitter(task, args.inputs, args.output)
 

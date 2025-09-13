@@ -22,8 +22,8 @@ class LLMProvider(LLMProviderBase):
             "messages" : dialogue,
             "stream": stream,
             "thinking": {"type": "enabled"},
-            "temperature": 0.6,
-            "response_format": {"type": "text"},
+            "temperature": 0.4,
+            "response_format": {"type": "json_object"}
         };
         headers = {
             "Authorization": "Bearer " + self.api_key, # type: ignore

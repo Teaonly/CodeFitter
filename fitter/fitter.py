@@ -6,13 +6,11 @@ import tempfile
 from io import StringIO
 from abc import ABC
 from loguru import logger
-from patch_ng import fromstring
 from fitter.provider.modules_factory import create_provider
 from prompt_toolkit import prompt, print_formatted_text, HTML
 
 COLOR = ["ansired", "ansigreen", "skyblue", "seagreen", "violet"]
 _color_ = 0
-
 
 ## LLM 工具描述
 allTools = [
@@ -132,8 +130,99 @@ def confirm_from_input(info):
             continue
 
 def apply_patch(file_path, diff_content):
-    ## TODO 完成文件修改的动作，返回 True ,None; 或者返回 False, error_message
-    
+    """解析 diff_content 格式，实现对 file_path 修改，返回 (success, error_message)"""
+    try:
+        # 确保文件存在
+        if not os.path.exists(file_path):
+            return False, f"目标文件不存在: {file_path}"
+        
+        # 读取原文件内容
+        with open(file_path, 'r', encoding='utf-8') as f:
+            original_lines = f.readlines()
+        
+        # 解析diff内容
+        diff_lines = diff_content.split('\n')
+        new_lines = []
+        i = 0
+        original_line_num = 0
+        in_hunk = False
+        
+        while i < len(diff_lines):
+            line = diff_lines[i]
+            
+            # 跳过文件头信息
+            if line.startswith('+++') or line.startswith('---'):
+                i += 1
+                continue
+            
+            # 处理hunk头部 (@@ line)
+            if line.startswith('@@'):
+                # 格式: @@ -original_start,original_count +new_start,new_count @@
+                parts = line.split(' ')
+                if len(parts) >= 3:
+                    original_part = parts[1]
+                    if ',' in original_part:
+                        original_start = int(original_part[1:].split(',')[0])
+                    else:
+                        original_start = int(original_part[1:])
+                    original_line_num = original_start - 1  # 转换为0-based索引
+                in_hunk = True
+                i += 1
+                continue
+            
+            # 处理实际的修改内容
+            if in_hunk:
+                if line.startswith('+'):
+                    # 新增行
+                    new_lines.append(line[1:] + '\n')
+                    i += 1
+                elif line.startswith('-'):
+                    # 删除行 - 跳过原文件中对应的行
+                    if original_line_num < len(original_lines):
+                        original_line_num += 1
+                    i += 1
+                elif line.startswith(' '):
+                    # 未修改的行
+                    if original_line_num < len(original_lines):
+                        new_lines.append(original_lines[original_line_num])
+                        original_line_num += 1
+                    i += 1
+                elif line.strip() == '':
+                    # 空行
+                    new_lines.append('\n')
+                    i += 1
+                else:
+                    # 未知格式，跳过
+                    i += 1
+            else:
+                i += 1
+        
+        # 如果没有hunk信息，简单替换整个文件内容
+        if not in_hunk:
+            # 尝试提取diff中的实际内容
+            content_start = -1
+            for j, line in enumerate(diff_lines):
+                if line.startswith('+') and not line.startswith('+++'):
+                    content_start = j
+                    break
+            
+            if content_start >= 0:
+                # 提取所有以+开头的内容（除了文件头）
+                new_lines = []
+                for line in diff_lines[content_start:]:
+                    if line.startswith('+') and not line.startswith('+++'):
+                        new_lines.append(line[1:] + '\n')
+            else:
+                return False, "无法解析diff格式"
+        
+        # 写入修改后的内容
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.writelines(new_lines)
+        
+        return True, None
+        
+    except Exception as e:
+        return False, f"应用patch失败: {e}"
 
 
 class CodeFitter(ABC):
@@ -204,8 +293,6 @@ class CodeFitter(ABC):
             'tool_calls': [fcall]
         }
         
-
-
         ## 显示LLM响应消息
         if thinking is not None and thinking.strip() != "":
             color_print('>>>>>>思考....', True)
@@ -217,9 +304,12 @@ class CodeFitter(ABC):
             print_formatted_text(HTML(f'<seagreen>输出:</seagreen>'))
             print(talking)
             color_print('------------------------\n')
-            
+        
+        ## 如果没有工具调用
+        
+
         ## 处理相关的命令
-        if fcall["function"]["name"] == "ModifyFile":
+        if fcall is not None and fcall["function"]["name"] == "ModifyFile":
             try:
                 fname = fcall["function"]["name"]
                 callid = fcall["id"]
@@ -239,11 +329,10 @@ class CodeFitter(ABC):
                 ## 根据获得 path/diff 字符串，修改目标文件
                 success, msg = apply_patch(arguments["file_name"], diff_content)
                 if success :
-                    color_print(f'已经完成文件: {arguments["file_name"]}的修改，退出程序！')
-                    sys.exit(0)
-                    return
-                
-                response = f"修改文件失败：{msg}，重新调用模型！"
+                    response = f"用户认可，并且确认已经完成文件 {arguments["file_name"]} 的修改。"
+                else:
+                    response = f"修改文件失败：{msg}，重新调用模型！"
+
                 color_print(response)
                 call_result = {
                     'role' : 'tool',
@@ -253,7 +342,6 @@ class CodeFitter(ABC):
                 allMessages.append(new_message)
                 allMessages.append(call_result)
                 return self.chat_loop(allMessages)
-
 
             ## 用户输入反馈，继续下一轮次调用
             response = content_from_input("输入反馈意见：")
