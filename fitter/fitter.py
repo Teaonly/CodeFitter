@@ -2,8 +2,11 @@ import os
 import sys
 import json
 import uuid
+import tempfile
+from io import StringIO
 from abc import ABC
 from loguru import logger
+from patch_ng import fromstring
 from fitter.provider.modules_factory import create_provider
 from prompt_toolkit import prompt, print_formatted_text, HTML
 
@@ -128,6 +131,48 @@ def confirm_from_input(info):
         except EOFError:
             continue
 
+def apply_patch(file_path, diff_content):
+    """使用patch-ng库应用patch/diff格式的内容到目标文件"""
+    try:
+        # 确保文件存在
+        if not os.path.exists(file_path):
+            return False, f"目标文件不存在: {file_path}"
+        
+        # 创建临时目录用于补丁应用
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # 复制原文件到临时目录
+            import shutil
+            temp_file_path = os.path.join(temp_dir, os.path.basename(file_path))
+            shutil.copy2(file_path, temp_file_path)
+            
+            # 切换到临时目录
+            original_cwd = os.getcwd()
+            os.chdir(temp_dir)
+            
+            try:
+                # 使用patch-ng解析并应用补丁
+                patch_set = fromstring(diff_content.encode('utf-8'))
+                if not patch_set:
+                    return False, "无法解析patch内容"
+                
+                # 应用补丁
+                result = patch_set.apply(strip=0)
+                if not result:
+                    return False, "应用patch失败"
+                
+                # 将修改后的文件复制回原位置
+                shutil.copy2(temp_file_path, file_path)
+                return True, None
+
+            finally:
+                # 恢复原始工作目录
+                os.chdir(original_cwd)
+                
+    except Exception as e:
+        return False, f"应用patch失败: {e}"
+
+
+
 class CodeFitter(ABC):
     def __init__(self, config):
         self.config = config
@@ -228,12 +273,26 @@ class CodeFitter(ABC):
             
             confirm = confirm_from_input(f"是否确认覆盖修改 {arguments["file_name"]}？(y/n)")
             if confirm == True:
-                color_print(f'已经完成文件: {arguments["file_name"]}的修改，退出程序！')
-                ## TODO 根据获得 path/diff 字符串，修改目标文件
+                ## 根据获得 path/diff 字符串，修改目标文件
+                success, msg = apply_patch(arguments["file_name"], diff_content)
+                if success :
+                    color_print(f'已经完成文件: {arguments["file_name"]}的修改，退出程序！')
+                    sys.exit(0)
+                    return
                 
-                sys.exit(0)
+                response = f"修改文件失败：{msg}，重新调用模型！"
+                color_print(response)
+                call_result = {
+                    'role' : 'tool',
+                    'tool_call_id': callid,
+                    'content': response
+                }
+                allMessages.append(new_message)
+                allMessages.append(call_result)
+                return self.chat_loop(allMessages)
 
-            ## 反馈，继续下一轮次调用
+
+            ## 用户输入反馈，继续下一轮次调用
             response = content_from_input("输入反馈意见：")
             response = f"用户拒绝了修改，反馈如下：{response}"
             call_result = {
@@ -245,3 +304,4 @@ class CodeFitter(ABC):
             allMessages.append(call_result)
             return self.chat_loop(allMessages)
 
+    
